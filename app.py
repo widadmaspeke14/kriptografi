@@ -1,7 +1,7 @@
 import streamlit as st
 
 # ==============================
-# FUNGSI BANTUAN
+# FUNGSI DASAR
 # ==============================
 def char_to_num(c):
     return ord(c) - 65
@@ -23,6 +23,17 @@ def gronsfeld_encrypt(plaintext, key):
 
     return result
 
+def gronsfeld_decrypt(ciphertext, key):
+    key_nums = [char_to_num(k) for k in key]
+    result = ""
+
+    for i, char in enumerate(ciphertext):
+        c = char_to_num(char)
+        k = key_nums[i % len(key_nums)]
+        result += num_to_char(c - k)
+
+    return result
+
 # ==============================
 # RAIL FENCE (2 REL)
 # ==============================
@@ -37,6 +48,24 @@ def rail_fence_encrypt(text):
 
     return rail1 + rail2
 
+def rail_fence_decrypt(cipher):
+    half = (len(cipher) + 1) // 2
+    rail1 = cipher[:half]
+    rail2 = cipher[half:]
+
+    result = ""
+    i = j = 0
+
+    for k in range(len(cipher)):
+        if k % 2 == 0:
+            result += rail1[i]
+            i += 1
+        else:
+            result += rail2[j]
+            j += 1
+
+    return result
+
 # ==============================
 # REVERSE CIPHER
 # ==============================
@@ -46,7 +75,7 @@ def reverse_cipher(text):
 # ==============================
 # CIPHER BENUA
 # ==============================
-def benua_cipher(text, benua):
+def benua_cipher_encrypt(text, benua):
     shift_map = {
         "Asia": 5,
         "Eropa": 7,
@@ -56,55 +85,77 @@ def benua_cipher(text, benua):
     }
 
     shift = shift_map.get(benua, 0)
-    result = ""
+    return "".join(num_to_char(char_to_num(c) + shift) for c in text)
 
-    for c in text:
-        result += num_to_char(char_to_num(c) + shift)
+def benua_cipher_decrypt(text, benua):
+    shift_map = {
+        "Asia": 5,
+        "Eropa": 7,
+        "Afrika": 3,
+        "Amerika": 4,
+        "Australia": 6
+    }
 
-    return result
+    shift = shift_map.get(benua, 0)
+    return "".join(num_to_char(char_to_num(c) - shift) for c in text)
 
 # ==============================
 # STREAMLIT UI
 # ==============================
-st.set_page_config(page_title="Enkripsi Gabungan", page_icon="🔐", layout="centered")
+st.set_page_config(page_title="Enkripsi & Dekripsi Gabungan", page_icon="🔐")
 
-st.title("🔐 Aplikasi Enkripsi Gabungan")
+st.title("🔐 Aplikasi Enkripsi & Dekripsi Gabungan")
 st.write("""
 **Metode:**  
-Gronsfeld Cipher → Rail Fence (2 rel) → Reverse Cipher → Cipher Benua  
+Gronsfeld → Rail Fence → Reverse → Cipher Benua
 """)
 
-st.divider()
-
-# INPUT USER
-plaintext = st.text_input("Masukkan Plainteks", "Kriptografi")
-key = st.text_input("Masukkan Nama Negara (Key)", "Indonesia")
+mode = st.radio("Pilih Mode", ["Enkripsi", "Dekripsi"])
 
 benua = st.selectbox(
     "Pilih Benua",
     ["Asia", "Eropa", "Afrika", "Amerika", "Australia"]
 )
 
-# PROSES ENKRIPSI
-if st.button("🔒 Enkripsi"):
-    ptext = plaintext.upper().replace(" ", "")
-    key = key.upper()
+key = st.text_input("Masukkan Nama Negara (Key)", "Indonesia").upper()
 
-    tahap1 = gronsfeld_encrypt(ptext, key)
-    tahap2 = rail_fence_encrypt(tahap1)
-    tahap3 = reverse_cipher(tahap2)
-    tahap4 = benua_cipher(tahap3, benua)
+if mode == "Enkripsi":
+    plaintext = st.text_input("Masukkan Plainteks", "Kriptografi")
 
-    st.success("Proses Enkripsi Berhasil")
+    if st.button("🔒 Enkripsi"):
+        ptext = plaintext.upper().replace(" ", "")
 
-    st.subheader("📌 Hasil Tiap Tahap")
-    st.write("**1. Gronsfeld Cipher** :", tahap1)
-    st.write("**2. Rail Fence Cipher** :", tahap2)
-    st.write("**3. Reverse Cipher** :", tahap3)
-    st.write("**4. Cipher Benua** :", tahap4)
+        t1 = gronsfeld_encrypt(ptext, key)
+        t2 = rail_fence_encrypt(t1)
+        t3 = reverse_cipher(t2)
+        t4 = benua_cipher_encrypt(t3, benua)
 
-    st.subheader("🔑 Ciphertext Akhir")
-    st.code(tahap4, language="text")
+        st.success("Enkripsi Berhasil")
+        st.write("**Gronsfeld Cipher:**", t1)
+        st.write("**Rail Fence Cipher:**", t2)
+        st.write("**Reverse Cipher:**", t3)
+        st.write("**Cipher Benua:**", t4)
+
+        st.subheader("🔑 Ciphertext Akhir")
+        st.code(t4)
+
+else:
+    ciphertext = st.text_input("Masukkan Ciphertext", "FEWHIAEDKPX")
+
+    if st.button("🔓 Dekripsi"):
+        t1 = benua_cipher_decrypt(ciphertext, benua)
+        t2 = reverse_cipher(t1)
+        t3 = rail_fence_decrypt(t2)
+        t4 = gronsfeld_decrypt(t3, key)
+
+        st.success("Dekripsi Berhasil")
+        st.write("**Hapus Cipher Benua:**", t1)
+        st.write("**Reverse Cipher:**", t2)
+        st.write("**Rail Fence Decrypt:**", t3)
+        st.write("**Gronsfeld Decrypt:**", t4)
+
+        st.subheader("📜 Plainteks")
+        st.code(t4)
 
 st.divider()
 st.caption("© Widad Maspeke – Kriptografi Klasik")
